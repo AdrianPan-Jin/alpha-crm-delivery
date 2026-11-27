@@ -1,0 +1,155 @@
+# 每日一致性自检规则（只读）
+#
+# 约定：
+# - 每条规则是一条只读 SELECT（引擎在一个 READ ONLY 事务里执行，物理上不能改数据）
+# - SELECT 返回的行就是「异常」；0 行 = 通过
+# - enabled: false 可临时停用某条规则（无需改代码）
+# - severity: high / medium / low，用于 webhook 汇总
+rules:
+  - id: company_uscc_duplicate_alive
+    title: 同一租户下统一社会信用代码重复（未删除）
+    severity: high
+    sql: |
+      SELECT org_id, unified_credit_code, count(*) AS n
+        FROM companies
+       WHERE deleted_at IS NULL AND unified_credit_code IS NOT NULL
+       GROUP BY org_id, unified_credit_code
+      HAVING count(*) > 1
+       LIMIT 50
+
+  - id: company_name_duplicate_alive
+    title: 同一租户下企业名重复（未删除）
+    severity: high
+    sql: |
+      SELECT org_id, name, count(*) AS n
+        FROM companies
+       WHERE deleted_at IS NULL
+       GROUP BY org_id, name
+      HAVING count(*) > 1
+       LIMIT 50
+
+  - id: contact_on_deleted_company
+    title: 联系人挂在已软删的企业上
+    severity: high
+    sql: |
+      SELECT k.id, k.name, k.company_id
+        FROM contacts k
+        JOIN companies c ON c.id = k.company_id
+       WHERE k.deleted_at IS NULL AND c.deleted_at IS NOT NULL
+       LIMIT 50
+
+  - id: contact_phone_not_normalized
+    title: 联系人手机号不符合 11 位大陆号格式
+    severity: medium
+    sql: |
+      SELECT id, phone
+        FROM contacts
+       WHERE deleted_at IS NULL AND phone IS NOT NULL AND phone !~ '^1[3-9][0-9]{9}$'
+       LIMIT 50
+
+  - id: membership_overlap_active
+    title: 同一企业存在重叠的有效会员期间
+    severity: high
+    sql: |
+      SELECT a.org_id, a.company_id, a.id AS a_id, b.id AS b_id
+        FROM crm_membership a
+        JOIN crm_membership b
+          ON a.org_id = b.org_id AND a.company_id = b.company_id AND a.id < b.id
+       WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL
+         AND a.status <> 'terminated' AND b.status <> 'terminated'
+         AND a.start_date IS NOT NULL AND a.end_date IS NOT NULL
+         AND b.start_date IS NOT NULL AND b.end_date IS NOT NULL
+         AND daterange(a.start_date, a.end_date, '[]') && daterange(b.start_date, b.end_date, '[]')
+       LIMIT 50
+
+  - id: membership_end_before_start
+    title: 会员期间结束日期早于开始日期
+    severity: high
+    sql: |
+      SELECT id, start_date, end_date
+        FROM crm_membership
+       WHERE deleted_at IS NULL AND start_date IS NOT NULL AND end_date IS NOT NULL
+         AND end_date < start_date
+       LIMIT 50
+
+  - id: contract_signed_without_sign_date
+    title: 合同已电子签署但缺少签署日期
+    severity: high
+    sql: |
+      SELECT id, contract_no, status, esign_status, sign_date
+        FROM crm_contract
+       WHERE deleted_at IS NULL AND esign_status = 'signed' AND sign_date IS NULL
+       LIMIT 50
+
+  - id: contract_negative_amount
+    title: 合同金额为负数
+    severity: high
+    sql: |
+      SELECT id, contract_no, amount_cents
+        FROM crm_contract
+       WHERE deleted_at IS NULL AND amount_cents < 0
+       LIMIT 50
+
+  - id: event_signup_duplicate_confirmed
+    title: 同一活动同一会员存在重复的已确认报名
+    severity: high
+    sql: |
+      SELECT event_id, member_id, count(*) AS n
+        FROM event_signups
+       WHERE deleted_at IS NULL AND status = 'confirmed'
+       GROUP BY event_id, member_id
+      HAVING count(*) > 1
+       LIMIT 50
+
+  - id: ticket_without_alive_signup
+    title: 电子票指向已软删的报名
+    severity: medium
+    sql: |
+      SELECT t.id, t.ticket_no, t.signup_id
+        FROM event_tickets t
+        JOIN event_signups s ON s.id = t.signup_id
+       WHERE t.deleted_at IS NULL AND s.deleted_at IS NOT NULL
+       LIMIT 50
+
+  - id: interaction_on_deleted_company
+    title: 互动记录关联的企业已被软删
+    severity: medium
+    sql: |
+      SELECT i.id, i.company_id, i.occurred_at
+        FROM crm_interaction i
+        JOIN companies c ON c.id = i.company_id
+       WHERE i.deleted_at IS NULL AND c.deleted_at IS NOT NULL
+       LIMIT 50
+
+  - id: interaction_summary_empty
+    title: 互动记录摘要为空
+    severity: low
+    sql: |
+      SELECT id, length(summary) AS len
+        FROM crm_interaction
+       WHERE deleted_at IS NULL AND (summary IS NULL OR length(trim(summary)) = 0)
+       LIMIT 50
+
+  - id: conversion_stats_negative
+    title: 播客归因统计出现负值
+    severity: high
+    sql: |
+      SELECT id, episode_id, stat_date, intro_requests, intro_staff_approved, intro_accepted,
+             assisted_event_signups, assisted_course_signups, assisted_opportunity_requests
+        FROM episode_conversion_stats
+       WHERE deleted_at IS NULL
+         AND (intro_requests < 0 OR intro_staff_approved < 0 OR intro_accepted < 0
+              OR assisted_event_signups < 0 OR assisted_course_signups < 0
+              OR assisted_opportunity_requests < 0)
+       LIMIT 50
+
+  - id: conversion_event_duplicate
+    title: 同一次转化被重复记录
+    severity: medium
+    sql: |
+      SELECT org_id, episode_id, kind, target_id, user_id, count(*) AS n
+        FROM episode_conversion_events
+       WHERE deleted_at IS NULL
+       GROUP BY org_id, episode_id, kind, target_id, user_id
+      HAVING count(*) > 1
+       LIMIT 50
