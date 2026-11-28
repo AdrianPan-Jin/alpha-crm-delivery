@@ -1,0 +1,45 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Excel 多个表格怎么合并？（三种方法 + 合并后必查三项）</title><meta name="description" content="Power Query、直接追加、脚本三种合并 Excel 多表的方法，附合并后必做的行数与金额核对。">
+<link rel="canonical" href="https://adrianpan-jin.github.io/alpha-crm-delivery/s/excel-merge.html">
+<style>body{margin:0;font:16px/1.75 -apple-system,"Microsoft YaHei",system-ui,sans-serif;color:#16283a;background:#fff}
+.wrap{max-width:820px;margin:0 auto;padding:0 22px}header{border-bottom:1px solid #e3e8ee;background:#f7f9fb}
+header .wrap{display:flex;justify-content:space-between;gap:12px;padding:14px 22px;flex-wrap:wrap}
+header a{color:#B23A0A;text-decoration:none;font-weight:600}h1{font-size:28px;line-height:1.4;margin:32px 0 8px}
+h2{font-size:20px;margin:26px 0 6px}.lead{color:#4a5b6e}ol,ul{padding-left:22px}li{margin:6px 0}
+code{background:#f7f9fb;border:1px solid #e3e8ee;border-radius:4px;padding:1px 5px;font-size:14px}
+.cta{background:#f7f9fb;border:1px solid #e3e8ee;border-radius:14px;padding:16px 18px;margin:26px 0}
+.cta a{color:#B23A0A;font-weight:700;text-decoration:none}
+footer{color:#4a5b6e;font-size:13px;border-top:1px solid #e3e8ee;margin-top:28px;padding:16px 0 40px}</style></head><body>
+<header><div class="wrap"><a href="./index.html">← 数据与文档代做</a>
+<span><a href="mailto:a1836982403@gmail.com">a1836982403@gmail.com</a> ｜ <a href="tel:+8613713477578">+86 137 1347 7578</a></span></div></header>
+<main class="wrap"><h1>Excel 多个表格合并：三种方法怎么选</h1>
+<p class="lead">三个办法，从「不用装软件」到「一次搞定 20 个文件」，按你的情况挑。</p>
+<h2>方法一：Power Query（推荐，Excel 自带、不写代码）</h2>
+<ol>
+<li>数据 → 获取数据 → 从文件 → 从文件夹，选中那批文件所在目录</li>
+<li>点「合并并转换数据」→ 选工作表 → 确定</li>
+<li>删掉不需要的列（保留「源」列名字方便追溯）→ 关闭并上载</li>
+</ol>
+<p>优点：下次把新文件丢进同一目录，右键「刷新」就合并好了。<br>
+坑：表头必须一致；有空行会导致列错位。</p>
+<h2>方法二：直接追加（文件少、结构完全一致）</h2>
+<ol>
+<li>把第一个表放最上面，其余表依次贴在下面</li>
+<li>删掉重复的表头行（选中 → 筛选 → 反选标题）</li>
+<li>插一列「来源」，用 <code>Ctrl+Enter</code> 批量填文件名</li>
+<li>数据 → 删除重复项（先按业务主键去重，别整行去重）</li>
+</ol>
+<h2>方法三：脚本（几十个文件、要定期跑）</h2>
+<p>用 Python + pandas 读目录下所有 xlsx，拼成一个表，顺手做类型清洗（金额去 ¥ 和逗号、日期统一格式），输出「合并表 + 汇总表 + 处理说明」。</p>
+<p>判断标准：如果每周都要合一次，就别手动了。</p>
+<h2>合并后必须做的三件事</h2>
+<ul>
+<li>核对总行数：合并后行数 = 各文件行数之和 − 表头数 ×（文件数−1）</li>
+<li>核对金额合计：合并前后总额一致，差一分都要查</li>
+<li>留一列来源：出问题时能定位到哪个文件、哪天导的</li>
+</ul>
+<div class="cta">自己搞不定或没时间：<b>简单表 30 元起、中等 80–150 元</b>，当天出样。
+发我一张截图 + 「要合成什么口径」，我回价格和交期。<a href="./excel.html">Excel 服务详情 →</a></div>
+
+</main><footer class="wrap">数字来自本机实测（2026-11-27/28）；示例数据全部虚构。</footer></body></html>
