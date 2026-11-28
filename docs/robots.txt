@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://adrianpan-jin.github.io/alpha-crm-delivery/sitemap.xml
